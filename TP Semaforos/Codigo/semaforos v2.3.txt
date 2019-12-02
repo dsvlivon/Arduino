@@ -1,0 +1,364 @@
+#include <LiquidCrystal.h>
+//////////////// DEFINES ESTADO DE SISTEMA
+#define STANDBY 0x00
+#define RUN 0x01
+#define MODE 0x02
+#define SET_TIMER 0x03
+#define SET_TURN 0x04
+//////////////// DEFINES BOTONES
+#define NOKEY 0x00
+#define SELECT 0x01
+#define ENTER 0x02
+#define DOWN 0x03
+#define UP 0x04
+#define NOKEY 0x05
+//////////////// STRUCT BOTONES
+struct s_status
+{
+    char lastKeyPressed;
+    char machineState;
+};
+s_status status;
+//////////////// FUNCIONES
+char kbdManager();
+void blinkTraffic();
+void stopTraffic();
+int trafficLigth(int semA, int semB, int semC, int clock);
+int trafficTurn(int semA, int semB, int semC, int turn, int clock);
+//////////////// VARIABLES GLOBALES
+int keyControl=0;
+int key=0;
+int timer = 0;
+int turn = 0;
+int shortTime = 0;
+int startingFlag = 0;
+//////////////// ASGINACION DE PINES
+int control = 0;
+// Semaforo (1) Mano Doble
+int sem1_red = 3;
+int sem1_yellow = 4;
+int sem1_green = 5;
+// Semaforo (2) Mano Simple
+int sem2_red = 6;
+int sem2_yellow = 7;
+int sem2_green = 8;
+// Semaforo (3) Mano Doble c/giro
+int sem3_red = 9;
+int sem3_yellow = 10;
+int sem3_green = 11;
+int sem3_redTurn = 12;
+int sem3_greenTurn = 13;
+///////////////LCD DECLARADO
+LiquidCrystal lcd(A0, A1, A2, A3, A4, 2);
+
+
+void setup()
+{ 
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  pinMode(sem1_red, OUTPUT);
+  pinMode(sem1_yellow, OUTPUT);
+  pinMode(sem1_green, OUTPUT);
+  pinMode(sem2_red, OUTPUT);
+  pinMode(sem2_yellow, OUTPUT);
+  pinMode(sem2_green, OUTPUT);
+  pinMode(sem3_red, OUTPUT);
+  pinMode(sem3_yellow, OUTPUT);
+  pinMode(sem3_green, OUTPUT);
+  pinMode(sem3_greenTurn, OUTPUT);
+  pinMode(sem3_redTurn, OUTPUT);
+  pinMode(A5, INPUT);
+  pinMode(0, INPUT);
+  status.machineState = STANDBY;
+  timer = 4000;
+  turn = 2000;
+  shortTime = timer/4;
+  keyControl = 1 ;
+  key = 0;
+}
+
+void loop()
+{ 
+  key = digitalRead(control);
+  if(keyControl != key)
+  {
+    Serial.println("Switch KEY");
+    status.machineState = STANDBY;
+    keyControl = key;
+  }
+  status.lastKeyPressed = kbdManager();
+  switch(status.machineState)
+  {
+    case STANDBY:
+    {
+      Serial.println("Maquina: STANDBY");
+      blinkTraffic();
+      lcd.setCursor(0, 0);
+      lcd.print("ENTER - Empezar");
+      lcd.setCursor(0, 1);
+      lcd.print("SELECT - Menu");
+      delay(1000);  
+      ////////////////////////////
+      if(status.lastKeyPressed == ENTER)
+      {
+        status.machineState = RUN;
+      }
+      else if(status.lastKeyPressed == SELECT)
+      {
+        status.machineState = MODE;
+      }
+      break;
+    }
+    case RUN:
+    {
+      Serial.println("Maquina: RUN");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("SELECT - Menu");
+      delay(1000);
+      //////////////////////////////////////
+      if(startingFlag == 0)
+      {
+        Serial.println("STEP 0 - ALERT (1) ALERT (2)/ ALERT (3)");
+        trafficLigth(sem1_yellow, sem2_yellow, sem3_yellow, shortTime);
+        startingFlag = 1;
+      }
+      Serial.println("STEP 1 - STOP (1) GO (2)/ STOP (3)");
+      trafficLigth(sem1_red, sem2_green, sem3_red, timer);
+
+      Serial.println("STEP 2 - STOP (1) ALERT (2)/ STOP (3)");
+      trafficLigth(sem1_red, sem2_yellow, sem3_red, shortTime);
+
+      Serial.println("STEP 3 - STOP (1) ALERT (2)/ ALERT (3)");        
+      trafficLigth(sem1_red,sem2_red, sem3_yellow, shortTime);
+
+      Serial.println("STEP 4 - STOP (1) STOP (2)/ ALERT (3)");        
+      trafficLigth(sem1_red,sem2_red, sem3_yellow, shortTime);
+
+      Serial.println("STEP 5 - STOP (1) STOP (2)/ GO y TURN (3)");
+      trafficTurn(sem1_red, sem2_red, sem3_green, sem3_greenTurn, turn);
+
+      Serial.println("STEP 6 - STOP (1) STOP (2)/ GO y NO TURN (3)");
+      trafficTurn(sem1_red, sem2_red, sem3_green, sem3_redTurn, shortTime);
+
+      Serial.println("STEP 7 - ALERT (1) STOP (2)/ GO y NO TURN (3)");
+      trafficTurn(sem1_yellow, sem2_red, sem3_green, sem3_redTurn, shortTime);
+
+      Serial.println("STEP 8 - GO (1) STOP (2)/ GO y NO TURN (3)");
+      trafficTurn(sem1_green, sem2_red, sem3_green, sem3_redTurn, timer);
+
+      Serial.println("STEP 9 - ALERT (1) STOP (2)/ ALERT y NO TURN (3)");
+      trafficTurn(sem1_yellow, sem2_red, sem3_yellow, sem3_redTurn, shortTime);
+
+      Serial.println("STEP 10 - ALERT (1) ALERT (2)/ ALERT y NO TURN (3)");
+      trafficTurn(sem1_yellow, sem2_yellow, sem3_yellow, sem3_redTurn, shortTime);
+      ////////////////////////////
+      if(status.lastKeyPressed == SELECT)
+      {
+        status.machineState = MODE;
+      }
+      break;
+    }
+    case MODE:
+    {
+      Serial.println("Maquina: MODE");
+      blinkTraffic();
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("UP - Timer");
+      lcd.setCursor(0, 1);
+      lcd.print("DOWN - T.Giro");
+      delay(1000);
+      ///////////////////////////
+      if(status.lastKeyPressed == ENTER)
+      {
+        status.machineState = RUN;
+      }
+      else if(status.lastKeyPressed == UP)
+      {
+        status.machineState = SET_TIMER;
+      }
+      else if(status.lastKeyPressed == DOWN)
+      {
+        status.machineState = SET_TURN;
+      }
+      break;
+    }
+    case SET_TIMER:
+    {
+      Serial.println("Maquina: SET_TIMER");
+      blinkTraffic();
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("UP +1 / DOWN -1");
+      lcd.setCursor(0, 1);
+      lcd.print("Timer: ");
+      lcd.print(timer/1000);
+      delay(1000);
+      ///////////////////////////
+      if(status.lastKeyPressed == ENTER)
+      {
+        status.machineState = RUN;
+      }
+      else if(status.lastKeyPressed == SELECT)
+      {
+        status.machineState = MODE;
+      }
+      else if(status.lastKeyPressed == UP && timer > turn)
+      {
+        timer += 1000;
+      }
+      else if(status.lastKeyPressed == DOWN && turn < timer)
+      {
+        timer -= 1000;
+      }
+      break;
+    }
+    case SET_TURN:
+    {
+      Serial.println("Maquina: SET_TURN");
+      blinkTraffic();
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("UP +1 / DOWN -1");
+      lcd.setCursor(0, 1);
+      lcd.print("T.Giro: ");
+      lcd.print(turn/1000);
+      delay(1000);
+      ///////////////////////////
+      if(status.lastKeyPressed == ENTER)
+      {
+        status.machineState = RUN;
+      }
+      else if(status.lastKeyPressed == SELECT)
+      {
+        status.machineState = MODE;
+      }
+      else if(status.lastKeyPressed == UP && turn < timer)
+      {
+        turn += 1000;
+      }
+      else if(status.lastKeyPressed == DOWN && turn < timer)
+      {
+        turn -= 1000;
+      }
+      break;
+    }
+    default:
+    {
+      break;
+    }
+  }
+  delay(1000);
+}   
+    
+int trafficLigth(int semA, int semB, int semC, int clock)
+{
+  int auxReturn=-1;
+  
+  if(clock>0)
+  {
+    digitalWrite(semA, HIGH);
+    digitalWrite(semB, HIGH);
+    digitalWrite(semC, HIGH);
+    delay(clock);
+    digitalWrite(semA, LOW);
+    digitalWrite(semB, LOW);
+    digitalWrite(semC, LOW);
+    auxReturn=0;
+  }
+  else
+  {
+    Serial.println("Error. Tiempo insuficiente.");
+  }
+  return auxReturn;
+}
+
+int trafficTurn(int semA, int semB, int semC, int turn, int clock)
+{
+  int auxReturn=-1;
+    
+  if(clock>0)
+  {
+    digitalWrite(semA, HIGH);
+    digitalWrite(semB, HIGH);
+    digitalWrite(semC, HIGH);
+    digitalWrite(turn, HIGH);
+    delay(clock);
+    digitalWrite(semA, LOW);
+    digitalWrite(semB, LOW);
+    digitalWrite(semC, LOW);
+    digitalWrite(turn, LOW);
+    auxReturn=0;
+  }
+  else
+  {
+    Serial.println("Error. Tiempo insuficiente.");
+  }
+  return auxReturn;
+}
+
+void stopTraffic()
+{     
+  digitalWrite(sem1_green, LOW);
+  digitalWrite(sem1_red ,LOW);
+  digitalWrite(sem1_yellow ,LOW);
+  ///////////////////////////////
+  digitalWrite(sem2_red ,LOW);
+  digitalWrite(sem2_yellow ,LOW);
+  digitalWrite(sem2_green ,LOW);
+  //////////////////////////////
+  digitalWrite(sem3_red ,LOW);
+  digitalWrite(sem3_yellow ,LOW);
+  digitalWrite(sem3_green ,LOW);
+  digitalWrite(sem3_greenTurn ,LOW);
+  digitalWrite(sem3_redTurn ,LOW);
+}
+
+
+void blinkTraffic()
+{     
+  Serial.println("Dispara Blink Traffic");
+  digitalWrite(sem1_yellow ,HIGH);
+  digitalWrite(sem2_yellow ,HIGH);
+  digitalWrite(sem3_yellow ,HIGH);
+  delay(500);
+  digitalWrite(sem1_yellow ,LOW);
+  digitalWrite(sem2_yellow ,LOW);
+  digitalWrite(sem3_yellow ,LOW);
+  ///////////////////////////////
+  digitalWrite(sem1_green, LOW);
+  digitalWrite(sem1_red ,LOW);
+  digitalWrite(sem2_red ,LOW);
+  digitalWrite(sem2_green ,LOW);
+  digitalWrite(sem3_red ,LOW);
+  digitalWrite(sem3_green ,LOW);
+  digitalWrite(sem3_greenTurn ,LOW);
+  digitalWrite(sem3_redTurn ,LOW);
+}
+
+
+
+char kbdManager()
+{
+  int data = analogRead(A5);
+  if (data > 100)
+  {
+    if (data > 500 && data < 520)
+   	{
+      return SELECT;
+	}
+    else if (data > 330 && data < 350)
+    {
+      return ENTER;
+	}  
+    else if (data > 244 && data < 264)
+    {
+      return UP;
+	}
+    else if (data > 190 && data < 210)
+    {
+      return DOWN;
+  	}
+  }
+}

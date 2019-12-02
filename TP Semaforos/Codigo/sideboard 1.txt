@@ -1,0 +1,155 @@
+int rojoUno = 12;
+int verdeUno = 11;
+int amarilloUno = 10;
+int giroOn = 9;
+int giroOff = 2;
+int rojoDos = 7;
+int verdeDos=8;
+int amarilloDos = 6;
+int verdeTres = 5;
+int rojoTres = 3;
+int amarilloTres = 4;
+
+void setup()
+{
+  pinMode(rojoUno,OUTPUT);
+  pinMode(verdeUno,OUTPUT);
+  pinMode(amarilloUno,OUTPUT);
+  pinMode(giroOn,OUTPUT);
+  pinMode(rojoDos,OUTPUT);
+  pinMode(verdeDos,OUTPUT);
+  pinMode(amarilloDos,OUTPUT);
+  pinMode(rojoTres,OUTPUT);
+  pinMode(verdeTres,OUTPUT);
+  pinMode(amarilloTres,OUTPUT);
+  pinMode(giroOff,OUTPUT);
+}
+
+void loop()
+{
+  	int time=2000;
+  	if(funcionLedGiro(verdeUno,rojoDos,rojoTres,giroOn,giroOff,time) == 0)
+    {
+    	funcionLed(verdeUno,verdeTres,rojoDos,time);
+        funcionLed(amarilloUno,amarilloDos,amarilloTres,time/2);
+        funcionLed(rojoUno,rojoTres,verdeDos,time);
+  	    funcionLed(amarilloUno,amarilloDos,amarilloTres,time/2);
+    }
+}
+
+int funcionLed(int ledUno,int ledDos,int ledTres,int time)
+{
+  	int ret = -1;
+	if(ledUno>0 && ledDos>0 && ledTres>0 && time>0)
+    {
+    	 digitalWrite(ledUno, HIGH);
+    	 digitalWrite(ledDos, HIGH);
+      	 digitalWrite(ledTres, HIGH);
+    	 delay(time);
+         digitalWrite(ledUno, LOW);
+         digitalWrite(ledDos, LOW);
+      	 digitalWrite(ledTres, LOW);
+      ret = 0;
+    }
+  	else
+    {
+    	printf("\nERROR");
+    }
+  return ret;
+}
+
+
+
+int funcionLedGiro(int ledUno,int ledDos,int ledTres,int ledGiro,int ledGiroDos,int time)
+{
+  	int ret = -1;
+	if(ledUno>0 && ledDos>0 && ledTres>0 && ledGiro>0 && ledGiroDos>0 && time>0)
+    {
+         digitalWrite(ledGiroDos,LOW);
+    	 digitalWrite(ledUno, HIGH);
+      	 digitalWrite(ledGiro,HIGH);
+    	 digitalWrite(ledDos, HIGH);
+      	 digitalWrite(ledTres, HIGH);
+    	 delay(time);
+         digitalWrite(ledGiro, LOW);
+      	 digitalWrite(ledGiroDos,HIGH);
+         digitalWrite(ledDos, LOW);
+      	 digitalWrite(ledTres, LOW);
+      	ret = 0;
+    }
+  	else
+    {
+    	printf("\nERROR");
+    }
+  return ret;
+}
+
+
+
+
+int trafficLight(red,gren,yellow,timer)
+{
+	int auxReturn=-1;
+  	int counter=0;
+  	//clock=4000 x ej. 
+  	int clock = timer/4; // clock =1000xej.
+  
+	if(counter==0)
+    {
+      while(counter==clock)
+      {
+        digitalWrite(yellow, HIGH);
+        digitalWrite(green, LOW);
+        digitalWrite(red, LOW);
+        counter++;
+      }
+    }
+  	else if(counter==clock)
+    {  
+      while(counter==clock*2)
+      {
+        digitalWrite(yellow, LOW);
+        digitalWrite(green, HIGH);
+        digitalWrite(red, LOW);        
+        counter++;
+      }
+    } 
+  	else if(counter==clock*2)
+    {
+      while(counter==clock*3)
+      {
+        digitalWrite(green, LOW);
+      	digitalWrite(yellow, LOW);
+      	digitalWrite(red, HIGH);
+      	counter++;
+        auxReturn=0;
+      }
+     else if(counter==clock*3)
+     {
+       while(counter==clock*4)
+      {
+        digitalWrite(yellow, HIGH);
+        digitalWrite(green, LOW);
+        digitalWrite(red, LOW);
+        counter++;
+      }
+      counter=0;
+    } 
+  return auxReturn;
+}
+
+
+
+sem1_red, sem1_yellow, sem1_green, 
+sem2_red, sem2_yellow, sem2_green, 
+sem3_red, sem3_yellow, sem3_green, sem3_greenTurn, sem3_redTurn
+
+while(clock==limit)
+{
+	clock=millis()/1000;
+}
+
+lcd.setCursor(0, 0);
+lcd.print("                ");
+lcd.setCursor(0, 2);
+lcd.print("                ");

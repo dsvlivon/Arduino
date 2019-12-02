@@ -1,0 +1,274 @@
+#include <LiquidCrystal.h>
+//////////////// DEFINES ESTADO DE SISTEMA
+#define RUN 0x00
+#define TIMESETTING 0x01
+//////////////// DEFINES BOTONES
+#define SELECT 0x01
+#define ENTER 0x02
+#define DOWN 0x03
+#define UP 0x04
+#define NOKEY 0x05
+
+//////////////// STRUCT BOTONES
+struct s_status
+{
+    char lastKeyPressed;
+    char machineState;
+    char fanCondition;
+};
+s_status status;
+//////////////// FUNCIONES
+void lcdManager(int currentTemp, int programmedTemp);
+char kbdManager();
+//////////////// VARIABLES GLOBALES
+int timer = 30000;
+int timerGiro = 20000;
+int starting=5000;
+////////////////
+int sem2_red = 13;
+int sem2_yellow = 12;
+int sem2_green =11;
+////////////////
+int sem1_red = 10;
+int sem1_yellow = 9;
+int sem1_green = 8;
+////////////////
+int sem3_red = 7;
+int sem3_yellow = 6;
+int sem3_green = 5;
+int sem3_greenTurn = 4;
+int sem3_redTurn = 3;
+///////////////
+LiquidCrystal myLcd(A0, A1, A2, A3, A4, 2);
+
+
+void setup()
+{
+  //LiquidCrystal(rs, enable, d4, d5, d6, d7) 
+
+  Serial.begin(9600);
+  myLcd.begin(16,2);
+  pinMode(sem1_red ,OUTPUT);
+  pinMode(sem1_yellow ,OUTPUT);
+  pinMode(sem1_green ,OUTPUT);
+  pinMode(sem2_red ,OUTPUT);
+  pinMode(sem2_yellow ,OUTPUT);
+  pinMode(sem2_green ,OUTPUT);
+  pinMode(sem3_red ,OUTPUT);
+  pinMode(sem3_yellow ,OUTPUT);
+  pinMode(sem3_green ,OUTPUT);
+  pinMode(sem3_greenTurn ,OUTPUT);
+  pinMode(sem3_redTurn ,OUTPUT);
+}
+
+  //lcd.setCursor(2, 0);
+  //lcd.print(digitalRead(5));        
+  
+  //digitalWrite(sem1_yellow, HIGH);
+  //digitalWrite(sem2_yellow, HIGH);
+  //digitalWrite(sem2_yellow, HIGH);
+
+void loop()
+{
+  //0 = verde/ 1 = amarillo/ 2 = rojo
+  int set=0;
+  char option,option2;
+  /////////////////////////////
+  myLcd.setCursor(0, 0);
+  myLcd.print("ENTER - Empezar");
+  
+  myLcd.setCursor(0, 1);
+  myLcd.print("SELECT - Menu");
+  /////////////////////////////
+  //lcdManager(set,set);  
+  option = kbdManager();
+  option2 = kbdManager();
+  switch (option)
+  {
+    case ENTER:
+      status.machineState= RUN;   
+        trafficLigth(sem1_yellow, sem2_yellow, sem3_yellow, starting);//INICIO
+        do
+        {
+          trafficLigth(sem1_red, sem2_green, sem3_red, timer);//PASO VERTICAL
+          trafficLigth(sem1_yellow,sem2_yellow, sem3_yellow, timer);//ALERTA TODOS
+          turnSignal(sem1_red, sem2_red, sem3_green, sem3_greenTurn, timerGiro);//PASO GIRO 
+          turnSignal(sem1_yellow, sem2_red, sem3_green, sem3_redTurn, timerGiro);//ROJO GIRO
+          trafficLigth(sem1_green, sem2_red, sem3_green, timer);//PASO DOBLE MANO
+          trafficLigth(sem1_yellow,sem2_yellow, sem3_yellow, timer);//ALERTA TODOS    
+
+        }while(option!=SELECT); 
+    break;
+    case SELECT:
+      status.machineState= TIMESETTING;   
+    stopTraffic();
+      
+      myLcd.setCursor(0, 0);
+        myLcd.print("Modificar Timer1");
+
+        myLcd.setCursor(0, 1);
+        myLcd.print("Modificar T.Giro");
+      //myLcd.clear();
+      
+      switch(option2)
+        {
+            case UP:
+            while(kbdManager()!=SELECT)
+            {
+              myLcd.clear();
+              myLcd.setCursor(0,0);
+              myLcd.print("UP+ / DOWN-");
+              myLcd.setCursor(0, 1);
+              myLcd.print("Timer: ");
+              myLcd.print(timer);
+              if(kbdManager()==UP)
+              {
+                timer+=5000;
+                myLcd.setCursor(0, 1);
+            myLcd.print("Timer: ");
+                myLcd.print(timer);
+              }
+              else if(kbdManager()==DOWN)
+              {
+                timer-=5000;
+                myLcd.setCursor(0, 1);
+            myLcd.print("Timer: ");
+                myLcd.print(timer);
+              }
+            }
+      myLcd.clear();
+            break;
+            case DOWN:
+            while(kbdManager()!=SELECT)
+            {
+              myLcd.clear();
+              myLcd.setCursor(0,0);
+              myLcd.print("UP+ / DOWN-");
+              myLcd.setCursor(0, 1);
+              myLcd.print("Timer: ");
+              myLcd.print(timer);
+              if(kbdManager()==UP)
+              {
+                timerGiro+=5000;
+                myLcd.setCursor(0, 1);
+            myLcd.print("Giro: ");
+                myLcd.print(timerGiro);
+              }
+              else if(kbdManager()==DOWN)
+              {
+                timerGiro-=5000;
+                myLcd.setCursor(0, 1);
+            myLcd.print("Giro: ");
+                myLcd.print(timerGiro);
+              }
+            }
+            break;
+      case ENTER:
+            break;
+
+        }   
+  }
+}   
+    
+
+int trafficLigth(int sem1, int sem2, int sem3, int limit)
+{
+    int auxReturn=-1;
+    int clock=0;
+    
+    if(limit>0)
+    {
+      digitalWrite(sem1, HIGH);
+      digitalWrite(sem2, HIGH);
+      digitalWrite(sem3, HIGH);
+      while(clock==limit)
+      {
+    clock = millis()/1000;
+      }
+      digitalWrite(sem1, LOW);
+      digitalWrite(sem2, LOW);
+      digitalWrite(sem3, LOW);
+      ////////////
+      auxReturn=0;
+    }
+    else
+    {
+      Serial.println("Error. Tiempo insuficiente.");
+    }
+    return auxReturn;
+}
+
+int turnSignal(int sem1, int sem2, int sem3, int giro, int limit)
+{
+  int auxReturn=-1;
+    int clock=0;
+    
+    if(limit>0)
+    {
+      digitalWrite(sem1, HIGH);
+      digitalWrite(sem2, HIGH);
+      digitalWrite(sem3, HIGH);
+      digitalWrite(giro, HIGH);
+      /////////////////////////
+      while(clock==limit)
+      {
+    clock = millis()/1000;
+      }
+      ////////////////////////
+      digitalWrite(sem1, LOW);
+      digitalWrite(sem2, LOW);
+      digitalWrite(sem3, LOW);
+      digitalWrite(giro, LOW);
+      ////////////
+      auxReturn=0;
+    }
+    else
+    {
+      Serial.println("Error. Tiempo insuficiente.");
+    }
+    return auxReturn;
+}
+
+void stopTraffic()
+{     
+  digitalWrite(sem1_green, LOW);
+  digitalWrite(sem1_red ,LOW);
+  digitalWrite(sem1_yellow ,LOW);
+  ///////////////////////////////
+  digitalWrite(sem2_red ,LOW);
+  digitalWrite(sem2_yellow ,LOW);
+  digitalWrite(sem2_green ,LOW);
+  //////////////////////////////
+  digitalWrite(sem3_red ,LOW);
+  digitalWrite(sem3_yellow ,LOW);
+  digitalWrite(sem3_green ,LOW);
+  digitalWrite(sem3_greenTurn ,LOW);
+  digitalWrite(sem3_redTurn ,LOW);
+}
+
+
+char kbdManager()
+{
+  int kbdPressed = analogRead(A5);
+  //#define SELECT 0x01
+  //#define ENTER 0x02
+  //#define DOWN 0x03
+  //#define UP 0x04
+    
+  if(kbdPressed > 900)
+    return NOKEY; 
+    
+  if(kbdPressed > 620)
+    return NOKEY; 
+
+  if(kbdPressed > 400)
+    return UP; 
+
+  if(kbdPressed > 250)
+    return DOWN; 
+
+  if(kbdPressed > 70)
+    return ENTER; 
+
+  return SELECT;  
+}

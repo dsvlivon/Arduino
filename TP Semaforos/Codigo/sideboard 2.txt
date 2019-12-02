@@ -1,0 +1,86 @@
+case ENTER:
+    	Serial.println("Aprete el Enter");
+      	status.machineState= RUN;   
+        trafficLigth(sem1_yellow, sem2_yellow, sem3_yellow, starting);//INICIO
+        do
+        {
+          trafficLigth(sem1_red, sem2_green, sem3_red, timer);//PASO VERTICAL
+          trafficLigth(sem1_yellow,sem2_yellow, sem3_yellow, timer);//ALERTA TODOS
+          turnSignal(sem1_red, sem2_red, sem3_green, sem3_greenTurn, timerGiro);//PASO GIRO 
+          turnSignal(sem1_yellow, sem2_red, sem3_green, sem3_redTurn, timerGiro);//ROJO GIRO
+          trafficLigth(sem1_green, sem2_red, sem3_green, timer);//PASO DOBLE MANO
+          trafficLigth(sem1_yellow,sem2_yellow, sem3_yellow, timer);//ALERTA TODOS
+        status.lastKeyPressed=kbdManager();
+        }
+    	while(status.lastKeyPressed!=SELECT); 
+    	break;
+    case SELECT:
+    	Serial.println("Aprete el SELECT");
+      	status.machineState= TIMESETTING;   
+    	stopTraffic();
+      
+      	lcd.setCursor(0, 0);
+        lcd.print("UP - Timer");
+
+        lcd.setCursor(0, 1);
+        lcd.print("DOWN - TimerGiro");
+    
+    	delay(2000);
+      	
+     switch(status.lastKeyPressed)
+        {
+           	case UP:
+       		Serial.println("Aprete UP");
+           	while(status.lastKeyPressed != SELECT)
+            {
+              lcd.clear();
+              lcd.setCursor(0,0);
+              lcd.print("UP+ / DOWN-");
+              lcd.setCursor(0, 1);
+              lcd.print("Timer: ");
+              lcd.print(timer);
+              
+              if(kbdManager()==UP)
+              {
+                timer+=5000;
+                lcd.setCursor(0, 1);
+            	lcd.print("Timer: ");
+                lcd.print(timer);
+              }
+              else if(kbdManager()==DOWN)
+              {
+                timer-=5000;
+                lcd.setCursor(0, 1);
+            	lcd.print("Timer: ");
+                lcd.print(timer);
+              }
+            }
+      		lcd.clear();
+            break;
+            case DOWN:
+       		Serial.println("Aprete DOWN");
+            while(kbdManager()!=SELECT)
+            {
+              lcd.clear();
+              lcd.setCursor(0,0);
+              lcd.print("UP+ / DOWN-");
+              lcd.setCursor(0, 1);
+              lcd.print("Timer: ");
+              lcd.print(timer);
+              if(kbdManager()==UP)
+              {
+                timerGiro+=5000;
+                lcd.setCursor(0, 1);
+            	lcd.print("Giro: ");
+                lcd.print(timerGiro);
+              }
+              else if(kbdManager()==DOWN)
+              {
+                timerGiro-=5000;
+                lcd.setCursor(0, 1);
+            	lcd.print("Giro: ");
+                lcd.print(timerGiro);
+              }
+            }
+      		break;
+        } 
